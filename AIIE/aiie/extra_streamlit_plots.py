@@ -233,7 +233,6 @@ def generate_interactive_heatmap(df_processed, index_columns, column_columns, ti
     return fig
 
 
-
 option = st.selectbox(
     'Choose the heatmap you want to display',
     ('Technology vs Issue', 'Technology vs Sector', 'Sector vs Issue', 'Technology vs Transparency', 'Issue vs Transparency', 'Sector vs Transparency')
@@ -315,20 +314,39 @@ st.plotly_chart(fig, use_container_width=False)
 
 
 
+# Assuming df_processed is your final DataFrame after all modifications
+df_processed.to_csv("processed_final.csv", index=False)
+
+
+
+
+
+
+
+
+
+
+
+
 ######################## INCIDENTS CLUSTERING ########################
+
 
 st.title('Clustering of Incidents (TSNE)')
 
+# Assuming 'df_processed' also contains a 'Type' column to filter incidents
 df_incidents = df_processed[df_processed['Type'] == 'Incident'].reset_index(drop=True)
 
-# Prepare separate feature categories
+# Prepare separate feature categories based on column prefixes in 'df_processed'
 feature_categories = {
     'tech': 'Technology Features',
     'transp': 'Transparency Features',
     'issue': 'Issue Features',
     'sector': 'Sector Features'
 }
-feature_selection = {}
+
+# Dynamically collect all column names for each category based on their prefixes
+feature_selection = {prefix: [col for col in df_processed.columns if col.startswith(prefix + '_')]
+                     for prefix in feature_categories}
 
 # Helper function to prepare feature selection multiselects
 def prepare_feature_multiselects(df, prefix, label):
@@ -360,16 +378,24 @@ for prefix, label in feature_categories.items():
 # Flatten selected features from all categories
 all_selected_features = [feature for features in feature_selection.values() for feature in features]
 
+# Filter incidents to include only those with at least one '1' in the selected features
+df_filtered_incidents = df_incidents[df_incidents[all_selected_features].any(axis=1)]
 
-# Apply t-SNE and KMeans clustering if features are selected
-if all_selected_features and st.button('Generate Clustering with t-SNE'):
+# Check if we have any incidents to cluster
+if not df_filtered_incidents.empty and st.button('Generate Clustering with t-SNE'):
     # Preprocess features with one-hot encoding and standard scaling
-    df_features = pd.get_dummies(df_incidents[all_selected_features], drop_first=True)
+    df_features = pd.get_dummies(df_filtered_incidents[all_selected_features], drop_first=True)
     scaler = StandardScaler()
     scaled_features = scaler.fit_transform(df_features)
 
-    # Apply t-SNE
-    tsne = TSNE(n_components=2, random_state=42)
+    # Get the number of samples
+    n_samples = scaled_features.shape[0]
+
+    # Ensure that perplexity is less than the number of samples
+    perplexity_value = min(n_samples - 1, 30)  # Default perplexity is 30
+
+    # Apply t-SNE with the adjusted perplexity
+    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity_value)
     embedding = tsne.fit_transform(scaled_features)
 
     # Apply KMeans clustering
@@ -385,10 +411,9 @@ if all_selected_features and st.button('Generate Clustering with t-SNE'):
         # Add more colors if there are more than 5 clusters
     }
 
-    # Continue with the rest of the code for t-SNE clustering
     clusters = kmeans.fit_predict(embedding)
     df_embedding = pd.DataFrame(embedding, columns=['t-SNE-1', 't-SNE-2'])
-    df_embedding['Cluster'] = clusters.astype(str)  # Convert cluster numbers to string
+    df_embedding['Cluster'] = clusters.astype(str)
 
 
     def aggregate_features(df, prefix):
@@ -400,37 +425,30 @@ if all_selected_features and st.button('Generate Clustering with t-SNE'):
         return aggregated_info
 
 
-    # Add Headline/title and aggregated features for hover information
-    df_embedding['Headline/title'] = df_incidents['Headline/title'].values
-    df_embedding['Technology'] = aggregate_features(df_incidents, 'tech')
-    df_embedding['Sector'] = aggregate_features(df_incidents, 'sector')
-    df_embedding['Issue'] = aggregate_features(df_incidents, 'issue')
-    df_embedding['Transparency'] = aggregate_features(df_incidents, 'transp')
+    # Add aggregated features for hover information
+    for prefix in feature_categories:
+        df_embedding[prefix.capitalize()] = aggregate_features(df_filtered_incidents, prefix)
 
-    # Sort df_embedding by 'Cluster' to ensure clusters appear in numerical order in the legend
-    df_embedding = df_embedding.sort_values(by='Cluster')
-
-    # Generate the scatter plot with sorted clusters
+    # Make sure the keys in hover_data match the column names you just created
     fig = px.scatter(
         df_embedding,
         x='t-SNE-1',
         y='t-SNE-2',
         color='Cluster',
         hover_data={
-            't-SNE-1': False,  # Exclude t-SNE-1 from hover data
-            't-SNE-2': False,  # Exclude t-SNE-2 from hover data
-            'Headline/title': True,
-            'Technology': True,
+            't-SNE-1': False,
+            't-SNE-2': False,
+            'Tech': True,  # Changed from 'Technology' to 'Tech'
             'Sector': True,
             'Issue': True,
-            'Transparency': True
+            'Transp': True  # Changed from 'Transparency' to 'Transp'
         },
-        color_discrete_map=color_discrete_map,  # Apply the color mapping
-        category_orders={"Cluster": [str(i) for i in range(5)]}  # Ensure cluster order in the legend
+        color_discrete_map=color_discrete_map,
+        category_orders={"Cluster": [str(i) for i in range(5)]}
     )
 
+    # Update plot appearance
     fig.update_traces(marker=dict(size=5))
-
     fig.update_layout(
         title='Incident Clustering with t-SNE & Cluster Coloring',
         margin=dict(l=0, r=0, b=0, t=30),
@@ -442,8 +460,7 @@ if all_selected_features and st.button('Generate Clustering with t-SNE'):
         )
     )
 
+    # Display plot
     st.plotly_chart(fig, use_container_width=True)
-
-
 else:
     st.write("Please select features and click 'Generate Clustering' to visualize.")
