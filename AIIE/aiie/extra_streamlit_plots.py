@@ -421,7 +421,10 @@ if all_selected_features and st.button('Generate Clustering with t-SNE'):
     df_embedding['Issue'] = aggregate_features(df_incidents, 'issue')
     df_embedding['Transparency'] = aggregate_features(df_incidents, 'transp')
 
-    # Generate the scatter plot
+    # Sort df_embedding by 'Cluster' to ensure clusters appear in numerical order in the legend
+    df_embedding = df_embedding.sort_values(by='Cluster')
+
+    # Generate the scatter plot with sorted clusters
     fig = px.scatter(
         df_embedding,
         x='t-SNE-1',
@@ -436,7 +439,8 @@ if all_selected_features and st.button('Generate Clustering with t-SNE'):
             'Issue': True,
             'Transparency': True
         },
-        color_discrete_map=color_discrete_map  # Apply the color mapping
+        color_discrete_map=color_discrete_map,  # Apply the color mapping
+        category_orders={"Cluster": [str(i) for i in range(5)]}  # Ensure cluster order in the legend
     )
 
     fig.update_traces(marker=dict(size=5))
@@ -453,6 +457,7 @@ if all_selected_features and st.button('Generate Clustering with t-SNE'):
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 else:
     st.write("Please select features and click 'Generate Clustering' to visualize.")
