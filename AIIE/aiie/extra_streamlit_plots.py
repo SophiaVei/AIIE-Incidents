@@ -15,7 +15,7 @@ st.set_page_config(layout="wide")
 # Load the dataset
 @st.cache_data  # Use @st.cache_data instead of @st.experimental_memo
 def load_data():
-    df = pd.read_csv(r"C:\Users\Sofia\PycharmProjects\Incidents\processed_dataset.csv").dropna(how="all")
+    df = pd.read_csv("processed_dataset.csv").dropna(how="all")
     return df
 
 
