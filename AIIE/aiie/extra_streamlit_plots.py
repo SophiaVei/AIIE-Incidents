@@ -1,11 +1,8 @@
 import numpy as np
 import pandas as pd
 import re
-import seaborn as sns
-import matplotlib.pyplot as plt
 import streamlit as st
 import plotly.figure_factory as ff
-import umap
 from sklearn.preprocessing import StandardScaler
 import plotly.express as px
 from sklearn.cluster import KMeans
