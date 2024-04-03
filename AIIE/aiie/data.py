@@ -133,6 +133,7 @@ def get_clean_data():
 
     return df, C
 
+
 get_clean_data()
 
 def prepare_topic_analysis(df, description):
