@@ -7,7 +7,15 @@ from sklearn.preprocessing import StandardScaler
 import plotly.express as px
 from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
+import os
+import pandas as pd
 
+# Assuming 'extra_streamlit_plots.py' and 'processed_dataset.csv' are both in the 'AIIE/aiie' directory
+
+# Get the directory of the current script
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
+csv_path = os.path.join(dir_path, 'processed_dataset.csv')
 
 
 st.set_page_config(layout="wide")
@@ -15,7 +23,7 @@ st.set_page_config(layout="wide")
 # Load the dataset
 @st.cache_data  # Use @st.cache_data instead of @st.experimental_memo
 def load_data():
-    df = pd.read_csv("processed_dataset.csv").dropna(how="all")
+    df = pd.read_csv(csv_path).dropna(how="all")
     return df
 
 
@@ -452,3 +460,7 @@ if all_selected_features and st.button('Generate Clustering with t-SNE'):
 
 else:
     st.write("Please select features and click 'Generate Clustering' to visualize.")
+
+import os
+print("Current working directory:", os.getcwd())
+print("Files in the current directory:", os.listdir('.'))
