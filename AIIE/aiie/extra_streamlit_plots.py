@@ -309,10 +309,9 @@ elif option == 'Sector vs Transparency':
         yaxis_title="Sector(s)"
     )
 
-st.plotly_chart(fig, use_container_width=False)
 
-
-
+with st.container():
+    st.plotly_chart(fig, use_container_width=True)
 
 # Assuming df_processed is your final DataFrame after all modifications
 df_processed.to_csv("processed_final.csv", index=False)
@@ -459,8 +458,9 @@ if not df_filtered_incidents.empty and st.button('Generate Clustering with t-SNE
             font_size=24
         )
     )
+    with st.container():
 
-    # Display plot
-    st.plotly_chart(fig, use_container_width=True)
+        # Display plot
+        st.plotly_chart(fig, use_container_width=True)
 else:
     st.write("Please select features and click 'Generate Clustering' to visualize.")
