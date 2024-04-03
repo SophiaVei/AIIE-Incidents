@@ -160,7 +160,7 @@ def get_top_columns(df, columns, top_n):
 
 
 # Streamlit app layout
-st.title('Data Exploration Heatmaps')
+st.title('Data Exploration Plots')
 
 
 
