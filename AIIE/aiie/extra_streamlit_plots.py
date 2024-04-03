@@ -172,8 +172,6 @@ frequency_option = st.selectbox("Select the number of top frequencies to display
 top_n_values = {'Top 10': 10, 'Top 20': 20, 'Top 50': 50, 'All': 'All'}
 top_n = top_n_values[frequency_option]
 
-# Continue with your logic using the selected `top_n` value
-
 
 df_processed, technology_set = preprocess_column(df, 'Technology(ies)', 'tech', merge_rename_operations_technology)
 df_processed, sector_set = preprocess_column(df_processed, 'Sector(s)', 'sector', merge_rename_operations_sector)
@@ -236,7 +234,6 @@ def generate_interactive_heatmap(df_processed, index_columns, column_columns, ti
 
 
 
-# Continue with your app logic...
 option = st.selectbox(
     'Choose the heatmap you want to display',
     ('Technology vs Issue', 'Technology vs Sector', 'Sector vs Issue', 'Technology vs Transparency', 'Issue vs Transparency', 'Sector vs Transparency')
@@ -336,7 +333,6 @@ st.plotly_chart(fig, use_container_width=False)
 
 st.title('Clustering of Incidents (TSNE)')
 
-# Filter for incidents only if your dataset includes various types
 df_incidents = df_processed[df_processed['Type'] == 'Incident'].reset_index(drop=True)
 
 # Prepare separate feature categories
@@ -403,7 +399,7 @@ if all_selected_features and st.button('Generate Clustering with t-SNE'):
         # Add more colors if there are more than 5 clusters
     }
 
-    # Continue with the rest of your code for t-SNE clustering
+    # Continue with the rest of the code for t-SNE clustering
     clusters = kmeans.fit_predict(embedding)
     df_embedding = pd.DataFrame(embedding, columns=['t-SNE-1', 't-SNE-2'])
     df_embedding['Cluster'] = clusters.astype(str)  # Convert cluster numbers to string
