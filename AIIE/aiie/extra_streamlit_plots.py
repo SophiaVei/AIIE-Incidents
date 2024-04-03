@@ -10,7 +10,7 @@ from sklearn.manifold import TSNE
 import os
 import pandas as pd
 
-# Assuming 'extra_streamlit_plots.py' and 'processed_dataset.csv' are both in the 'AIIE/aiie' directory
+######################## INCIDENTS HEATMAPS ########################
 
 # Get the directory of the current script
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -315,21 +315,7 @@ st.plotly_chart(fig, use_container_width=False)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+######################## INCIDENTS CLUSTERING ########################
 
 st.title('Clustering of Incidents (TSNE)')
 
@@ -461,7 +447,3 @@ if all_selected_features and st.button('Generate Clustering with t-SNE'):
 
 else:
     st.write("Please select features and click 'Generate Clustering' to visualize.")
-
-import os
-print("Current working directory:", os.getcwd())
-print("Files in the current directory:", os.listdir('.'))
