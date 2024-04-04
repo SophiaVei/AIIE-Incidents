@@ -164,11 +164,11 @@ st.title('Data Exploration Heatmaps')
 
 
 
-# Replace the slider with a dropdown for selecting the number of top frequencies
+# Dropdown with radio button for selecting the number of top frequencies
 top_n_options = ["Top 10", "Top 20", "Top 50", "All"]
-frequency_option = st.selectbox("Select the number of top frequencies to display:", options=top_n_options)
+frequency_option = st.radio("Select the number of top frequencies to display:", options=top_n_options)
 
-# Mapping selected option to a value
+# Mapping selected option to a value remains the same
 top_n_values = {'Top 10': 10, 'Top 20': 20, 'Top 50': 50, 'All': 'All'}
 top_n = top_n_values[frequency_option]
 
