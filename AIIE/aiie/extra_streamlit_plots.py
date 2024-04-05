@@ -195,14 +195,14 @@ categories = {
 }
 # User selects the category for the X axis
 x_axis_option = st.selectbox(
-    'Choose the category for the X axis:',
+    'Choose X axis:',
     options=list(categories.keys()),  # Display the keys for selection
     index=0  # Default selection (first item)
 )
 
 # User selects the category for the Y axis
 y_axis_option = st.selectbox(
-    'Choose the category for the Y axis:',
+    'Choose Y axis:',
     options=list(categories.keys()),  # Display the keys for selection
     index=1  # Default to second item to avoid same default as X axis
 )
