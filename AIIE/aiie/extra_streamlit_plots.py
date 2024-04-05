@@ -186,6 +186,41 @@ transp_columns = get_top_columns(df_processed, [col for col in df_processed.colu
 
 
 
+# Available categories for selection
+categories = {
+    'Technology': 'tech',
+    'Sector': 'sector',
+    'Issue': 'issue',
+    'Transparency': 'transp'
+}
+# User selects the category for the X axis
+x_axis_option = st.selectbox(
+    'Choose the category for the X axis:',
+    options=list(categories.keys()),  # Display the keys for selection
+    index=0  # Default selection (first item)
+)
+
+# User selects the category for the Y axis
+y_axis_option = st.selectbox(
+    'Choose the category for the Y axis:',
+    options=list(categories.keys()),  # Display the keys for selection
+    index=1  # Default to second item to avoid same default as X axis
+)
+
+# Dynamic title based on user selection
+dynamic_title = f"Heatmap of {x_axis_option} vs {y_axis_option}"
+
+def generate_heatmap_from_selection(df_processed, x_axis_category, y_axis_category):
+    # Extracting columns for the selected categories
+    x_columns = get_top_columns(df_processed, [col for col in df_processed.columns if
+                                               col.startswith(categories[x_axis_category] + '_')], top_n)
+    y_columns = get_top_columns(df_processed, [col for col in df_processed.columns if
+                                               col.startswith(categories[y_axis_category] + '_')], top_n)
+
+    # Generate and return the interactive heatmap
+    return generate_interactive_heatmap(df_processed, x_columns, y_columns, '', x_axis_option, y_axis_option)
+
+
 def generate_interactive_heatmap(df_processed, index_columns, column_columns, title, xaxis_title, yaxis_title):
     # Initialize the occurrence matrix with zeros
     occurrence_matrix = pd.DataFrame(0, index=index_columns, columns=column_columns)
@@ -233,10 +268,7 @@ def generate_interactive_heatmap(df_processed, index_columns, column_columns, ti
     return fig
 
 
-option = st.selectbox(
-    'Choose the heatmap you want to display',
-    ('Technology vs Issue', 'Technology vs Sector', 'Sector vs Issue', 'Technology vs Transparency', 'Issue vs Transparency', 'Sector vs Transparency')
-)
+
 
 # After selecting the heatmap to display
 title_mapping = {
@@ -248,74 +280,20 @@ title_mapping = {
     'Sector vs Transparency': 'Heatmap of Sector(s) vs Transparency',
 }
 
-# Display the selected heatmap's title
-st.write(f"### {title_mapping[option]}")
-# Add space after the title
+
+
+
+# Use the dynamic title when generating the heatmap
+heatmap_fig = generate_heatmap_from_selection(df_processed, x_axis_option, y_axis_option)
+
+# Display the dynamic title and heatmap
+st.write(f"### {dynamic_title}")
 st.markdown("<br><br>", unsafe_allow_html=True)
-
-# Mapping option to function call
-if option == 'Technology vs Issue':
-    fig = generate_interactive_heatmap(
-        df_processed=df_processed,
-        index_columns=tech_columns,
-        column_columns=issue_columns,
-        title='',
-        xaxis_title="Issue(s)",
-        yaxis_title="Technology(ies)"
-    )
-elif option == 'Technology vs Sector':
-    fig = generate_interactive_heatmap(
-        df_processed=df_processed,
-        index_columns=tech_columns,
-        column_columns=sector_columns,
-        title='',
-        xaxis_title="Sector(s)",
-        yaxis_title="Technology(ies)"
-    )
-elif option == 'Sector vs Issue':
-    fig = generate_interactive_heatmap(
-        df_processed=df_processed,
-        index_columns=sector_columns,
-        column_columns=issue_columns,
-        title='',
-        xaxis_title="Issue(s)",
-        yaxis_title="Sector(s)"
-    )
-elif option == 'Technology vs Transparency':
-    fig = generate_interactive_heatmap(
-        df_processed=df_processed,
-        index_columns=tech_columns,
-        column_columns=transp_columns,
-        title='',
-        xaxis_title="Transparency",
-        yaxis_title="Technology(ies)"
-    )
-elif option == 'Issue vs Transparency':
-    fig = generate_interactive_heatmap(
-        df_processed=df_processed,
-        index_columns=issue_columns,
-        column_columns=transp_columns,
-        title='',
-        xaxis_title="Transparency",
-        yaxis_title="Issue(s)"
-    )
-elif option == 'Sector vs Transparency':
-    fig = generate_interactive_heatmap(
-        df_processed=df_processed,
-        index_columns=sector_columns,
-        column_columns=transp_columns,
-        title='',
-        xaxis_title="Transparency",
-        yaxis_title="Sector(s)"
-    )
-
-
 with st.container():
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(heatmap_fig, use_container_width=True)
 
 # Assuming df_processed is your final DataFrame after all modifications
 df_processed.to_csv("processed_final.csv", index=False)
-
 
 
 
