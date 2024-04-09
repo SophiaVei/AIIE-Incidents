@@ -446,6 +446,7 @@ if not df_filtered_incidents.empty and (all_features_selected or st.button('Gene
         title='Incident Clustering with UMAP & Cluster Coloring',
         margin=dict(l=0, r=0, b=0, t=30),
         legend_title_text='Cluster',
+        width=700, height=700,
         legend=dict(
             itemsizing='constant',
             title_font_size=25,
