@@ -1,15 +1,12 @@
 import numpy as np
-import pandas as pd
 import re
 import streamlit as st
 import plotly.figure_factory as ff
 from sklearn.preprocessing import StandardScaler
 import plotly.express as px
 from sklearn.cluster import KMeans
-from sklearn.manifold import TSNE
 import os
 import pandas as pd
-from umap import UMAP
 
 ######################## INCIDENTS HEATMAPS ########################
 
@@ -370,9 +367,31 @@ if not df_filtered_incidents.empty and (all_features_selected or st.button('Gene
     # Ensure that perplexity is less than the number of samples
     perplexity_value = min(n_samples - 1, 30)  # Default perplexity is 30
 
-    # Apply UMAP for dimensionality reduction
-    umap_instance = UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=42)
-    embedding = umap_instance.fit_transform(scaled_features)
+
+    @st.cache_data
+    def perform_umap(scaled_features, n_neighbors=15, min_dist=0.1, n_components=2, random_state=42):
+        """
+        Perform UMAP dimensionality reduction on scaled features.
+
+        Parameters:
+        - scaled_features: Standardized features array.
+        - n_neighbors: The size of local neighborhood (in terms of number of neighboring sample points) used for manifold approximation.
+        - min_dist: The effective minimum distance between embedded points. Smaller values will result in a more clustered/embedded distribution.
+        - n_components: The dimension of the space to embed into.
+        - random_state: A seed for the random number generator for reproducibility.
+
+        Returns:
+        - embedding: The transformed data.
+        """
+        from umap import UMAP
+        umap_instance = UMAP(n_neighbors=n_neighbors, min_dist=min_dist, n_components=n_components,
+                             random_state=random_state)
+        embedding = umap_instance.fit_transform(scaled_features)
+        return embedding
+
+
+    embedding = perform_umap(scaled_features)
+
     # Apply KMeans clustering
     kmeans = KMeans(n_clusters=5, random_state=42)
     clusters = kmeans.fit_predict(embedding)
