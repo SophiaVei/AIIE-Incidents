@@ -9,6 +9,7 @@ from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 import os
 import pandas as pd
+from umap import UMAP
 
 ######################## INCIDENTS HEATMAPS ########################
 
@@ -308,10 +309,11 @@ df_processed.to_csv("processed_final.csv", index=False)
 ######################## INCIDENTS CLUSTERING ########################
 
 
-st.title('Clustering of Incidents (TSNE)')
+st.title('Clustering of Incidents (UMAP)')
 
 # Assuming 'df_processed' also contains a 'Type' column to filter incidents
 df_incidents = df_processed[df_processed['Type'] == 'Incident'].reset_index(drop=True)
+
 
 # Prepare separate feature categories based on column prefixes in 'df_processed'
 feature_categories = {
@@ -321,49 +323,37 @@ feature_categories = {
     'sector': 'Sector Features'
 }
 
-# Dynamically collect all column names for each category based on their prefixes
-feature_selection = {prefix: [col for col in df_processed.columns if col.startswith(prefix + '_')]
-                     for prefix in feature_categories}
+
 
 # Helper function to prepare feature selection multiselects
 def prepare_feature_multiselects(df, prefix, label):
+    # Retrieve features based on the prefix
     features = [col for col in df.columns if col.startswith(prefix)]
     feature_names = [col.replace(prefix + '_', '') for col in features]
-    # Include "All" option alongside the feature names
-    all_options = ['All'] + feature_names
-    # Use a unique key for each multiselect and include the "All" option
-    selected_features = st.multiselect(
-        label=f'Select {label}:',
-        options=all_options,
-        default='All',
-        key=f'multiselect_{prefix}'  # Maintain unique key for each multiselect
-    )
-    if 'All' in selected_features:
-        # If "All" is selected, return all features with prefix
-        return [prefix + '_' + feature for feature in feature_names]
-    else:
-        # Else, return only the selected features with prefix
-        return [prefix + '_' + feature for feature in selected_features]
+    selected_features = st.multiselect(label=f'Select {label}:', options=feature_names, default=[],
+                                       key=f'multiselect_{prefix}')
+    is_all_selected = len(selected_features) == 0
 
+    return [prefix + '_' + feature for feature in (selected_features if selected_features else feature_names)], is_all_selected
 
-
-# Create multiselects for each category and collect selected features
+# Process feature selection for each category and check if "All" selected
+feature_selection = {}
+all_features_selected = True  # Assume "All" is selected initially
 for prefix, label in feature_categories.items():
-    selected_features = prepare_feature_multiselects(df_incidents, prefix, label)
+    selected_features, is_all_selected = prepare_feature_multiselects(df_incidents, prefix, label)
     feature_selection[prefix] = selected_features
+    all_features_selected &= is_all_selected  # Update based on each category's selection
 
-# Flatten selected features from all categories
 all_selected_features = [feature for features in feature_selection.values() for feature in features]
 
-# Filter incidents to include only those with at least one '1' in the selected features
 df_filtered_incidents = df_incidents[df_incidents[all_selected_features].any(axis=1)]
 
 # Check if we have any incidents to cluster
-if not df_filtered_incidents.empty and st.button('Generate Clustering with t-SNE'):
+if not df_filtered_incidents.empty and (all_features_selected or st.button('Generate Clustering')):
     # Preprocess features with one-hot encoding and standard scaling
     df_features = pd.get_dummies(df_filtered_incidents[all_selected_features], drop_first=True)
     scaler = StandardScaler()
-    scaled_features = scaler.fit_transform(df_features)
+    scaled_features = scaler.fit_transform(df_filtered_incidents[all_selected_features])
 
     # Get the number of samples
     n_samples = scaled_features.shape[0]
@@ -371,12 +361,12 @@ if not df_filtered_incidents.empty and st.button('Generate Clustering with t-SNE
     # Ensure that perplexity is less than the number of samples
     perplexity_value = min(n_samples - 1, 30)  # Default perplexity is 30
 
-    # Apply t-SNE with the adjusted perplexity
-    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity_value)
-    embedding = tsne.fit_transform(scaled_features)
-
+    # Apply UMAP for dimensionality reduction
+    umap_instance = UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=42)
+    embedding = umap_instance.fit_transform(scaled_features)
     # Apply KMeans clustering
     kmeans = KMeans(n_clusters=5, random_state=42)
+    clusters = kmeans.fit_predict(embedding)
 
     # Define the color mapping for clusters
     color_discrete_map = {
@@ -388,8 +378,9 @@ if not df_filtered_incidents.empty and st.button('Generate Clustering with t-SNE
         # Add more colors if there are more than 5 clusters
     }
 
-    clusters = kmeans.fit_predict(embedding)
-    df_embedding = pd.DataFrame(embedding, columns=['t-SNE-1', 't-SNE-2'])
+
+    # Prepare the DataFrame for plotting
+    df_embedding = pd.DataFrame(embedding, columns=['UMAP-1', 'UMAP-2'])
     df_embedding['Cluster'] = clusters.astype(str)
 
 
@@ -406,19 +397,16 @@ if not df_filtered_incidents.empty and st.button('Generate Clustering with t-SNE
     for prefix in feature_categories:
         df_embedding[prefix.capitalize()] = aggregate_features(df_filtered_incidents, prefix)
 
-    # Make sure the keys in hover_data match the column names you just created
+    # Adjust the plot creation to reflect UMAP usage
     fig = px.scatter(
         df_embedding,
-        x='t-SNE-1',
-        y='t-SNE-2',
+        x='UMAP-1',
+        y='UMAP-2',
         color='Cluster',
         hover_data={
-            't-SNE-1': False,
-            't-SNE-2': False,
-            'Tech': True,  # Changed from 'Technology' to 'Tech'
-            'Sector': True,
-            'Issue': True,
-            'Transp': True  # Changed from 'Transparency' to 'Transp'
+            'UMAP-1': False,
+            'UMAP-2': False,
+            # Other hover data remains the same
         },
         color_discrete_map=color_discrete_map,
         category_orders={"Cluster": [str(i) for i in range(5)]}
@@ -427,7 +415,7 @@ if not df_filtered_incidents.empty and st.button('Generate Clustering with t-SNE
     # Update plot appearance
     fig.update_traces(marker=dict(size=5))
     fig.update_layout(
-        title='Incident Clustering with t-SNE & Cluster Coloring',
+        title='Incident Clustering with UMAP & Cluster Coloring',
         margin=dict(l=0, r=0, b=0, t=30),
         legend_title_text='Cluster',
         legend=dict(
@@ -437,7 +425,6 @@ if not df_filtered_incidents.empty and st.button('Generate Clustering with t-SNE
         )
     )
     with st.container():
-
         # Display plot
         st.plotly_chart(fig, use_container_width=True)
 else:
