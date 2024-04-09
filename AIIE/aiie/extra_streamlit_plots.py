@@ -163,6 +163,8 @@ def get_top_columns(df, columns, top_n):
 # Streamlit app layout
 st.title('Data Exploration Heatmaps')
 
+# Description for the heatmap
+st.write("Heatmaps representing the counts between specific pairs of features to check how the two variables (in the x/y axes) are related.")
 
 
 # Dropdown with radio button for selecting the number of top frequencies
@@ -311,6 +313,9 @@ df_processed.to_csv("processed_final.csv", index=False)
 
 st.title('Clustering of Incidents (UMAP)')
 
+# Description for the UMAP clustering visualization
+st.write("UMAP visualizations that represent the clusters produced by selecting specific values to check similar incidents that are close to each other.")
+
 # Assuming 'df_processed' also contains a 'Type' column to filter incidents
 df_incidents = df_processed[df_processed['Type'] == 'Incident'].reset_index(drop=True)
 
@@ -347,6 +352,10 @@ for prefix, label in feature_categories.items():
 all_selected_features = [feature for features in feature_selection.values() for feature in features]
 
 df_filtered_incidents = df_incidents[df_incidents[all_selected_features].any(axis=1)]
+
+# Before displaying the plot or the button, add the comment here
+st.caption("By default, when nothing is selected, for each category all features are used. \
+Select specific features and click on \"Generate Clustering\" to view the plot based on your preferences.")
 
 # Check if we have any incidents to cluster
 if not df_filtered_incidents.empty and (all_features_selected or st.button('Generate Clustering')):
