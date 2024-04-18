@@ -467,4 +467,5 @@ if not df_filtered_incidents.empty and (all_features_selected or st.button('Gene
         # Display plot
         st.plotly_chart(fig, use_container_width=True)
 else:
+
     st.write("Please select features and click 'Generate Clustering' to visualize.")
