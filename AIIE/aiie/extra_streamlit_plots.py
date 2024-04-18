@@ -425,6 +425,13 @@ if not df_filtered_incidents.empty and (all_features_selected or st.button('Gene
     for prefix in feature_categories:
         df_embedding[prefix.capitalize()] = aggregate_features(df_filtered_incidents, prefix)
 
+    # Add Headline/title and aggregated features for hover information
+    df_embedding['Headline/title'] = df_incidents['Headline/title'].values
+    df_embedding['Technology'] = aggregate_features(df_incidents, 'tech')
+    df_embedding['Sector'] = aggregate_features(df_incidents, 'sector')
+    df_embedding['Issue'] = aggregate_features(df_incidents, 'issue')
+    df_embedding['Transparency'] = aggregate_features(df_incidents, 'transp')
+
     # Adjust the plot creation to reflect UMAP usage
     fig = px.scatter(
         df_embedding,
@@ -434,8 +441,11 @@ if not df_filtered_incidents.empty and (all_features_selected or st.button('Gene
         hover_data={
             'UMAP-1': False,
             'UMAP-2': False,
-            # Other hover data remains the same
-        },
+            'Headline/title': True,
+            'Technology': True,
+            'Sector': True,
+            'Issue': True,
+            'Transparency': True},
         color_discrete_map=color_discrete_map,
         category_orders={"Cluster": [str(i) for i in range(5)]}
     )
