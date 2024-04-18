@@ -232,10 +232,10 @@ def generate_interactive_heatmap(df_processed, index_columns, column_columns, ti
                 occurrence_matrix.loc[index_col, column_col] = np.logical_and(df_processed[index_col] == 1, df_processed[column_col] == 1).sum()
 
     # Dynamic adjustments for figure size based on category count
-    min_width_per_column = 80  # Minimum width per column
+    min_width_per_column = 35  # Minimum width per column
     min_height_per_row = 35  # Minimum height per row
     base_width = 300  # Base width to start with
-    base_height = 200  # Base height to start with
+    base_height = base_width  # Base height to start with
 
     num_columns = len(column_columns)
     num_rows = len(index_columns)
@@ -258,7 +258,7 @@ def generate_interactive_heatmap(df_processed, index_columns, column_columns, ti
         title=title,
         autosize=False,
         width=fig_width,
-        height=fig_height,
+        height=fig_width,
         margin=dict(t=50, l=50, b=150, r=50),
         xaxis_title=xaxis_title,  # Set x-axis title
         yaxis_title=yaxis_title,  # Set y-axis title
