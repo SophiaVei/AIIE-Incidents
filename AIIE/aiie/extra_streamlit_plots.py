@@ -210,42 +210,46 @@ y_axis_option = st.selectbox(
 # Dynamic title based on user selection
 dynamic_title = f"Heatmap of {x_axis_option} vs {y_axis_option}"
 
+
+# Generate the heatmap based on the user selection
 def generate_heatmap_from_selection(df_processed, x_axis_category, y_axis_category):
-    # Extracting columns for the selected categories
+    # Get the correct columns for each axis based on the user's selection
     x_columns = get_top_columns(df_processed, [col for col in df_processed.columns if
                                                col.startswith(categories[x_axis_category] + '_')], top_n)
     y_columns = get_top_columns(df_processed, [col for col in df_processed.columns if
                                                col.startswith(categories[y_axis_category] + '_')], top_n)
 
     # Generate and return the interactive heatmap
-    return generate_interactive_heatmap(df_processed, x_columns, y_columns, '', x_axis_option, y_axis_option)
+    return generate_interactive_heatmap(df_processed, x_columns, y_columns, '', x_axis_category, y_axis_category)
 
 
-def generate_interactive_heatmap(df_processed, index_columns, column_columns, title, xaxis_title, yaxis_title):
+# Create the interactive heatmap
+def generate_interactive_heatmap(df_processed, x_columns, y_columns, title, xaxis_label, yaxis_label):
     # Initialize the occurrence matrix with zeros
-    occurrence_matrix = pd.DataFrame(0, index=index_columns, columns=column_columns)
+    occurrence_matrix = pd.DataFrame(0, index=y_columns, columns=x_columns)
 
     # Calculate occurrences
-    for index_col in index_columns:
-        for column_col in column_columns:
-            if index_col in df_processed.columns and column_col in df_processed.columns:  # Ensure columns exist
-                occurrence_matrix.loc[index_col, column_col] = np.logical_and(df_processed[index_col] == 1, df_processed[column_col] == 1).sum()
+    for y_col in y_columns:
+        for x_col in x_columns:
+            occurrence_matrix.loc[y_col, x_col] = np.logical_and(
+                df_processed[y_col] == 1, df_processed[x_col] == 1).sum()
 
-    # Dynamic adjustments for figure size based on category count
+    # Dynamic adjustments for figure size
     min_width_per_column = 35  # Minimum width per column
     min_height_per_row = 35  # Minimum height per row
     base_width = 300  # Base width to start with
     base_height = base_width  # Base height to start with
 
-    num_columns = len(column_columns)
-    num_rows = len(index_columns)
+    num_columns = len(x_columns)  # Correct variable name used here
+    num_rows = len(y_columns)  # Correct variable name used here
     fig_width = base_width + num_columns * min_width_per_column
     fig_height = base_height + num_rows * min_height_per_row
 
-    # Custom colorscale from white to blue
+    # Custom colorscale
     custom_colorscale = [[0, 'white'], [1, 'blue']]
 
     # Create the heatmap with plotly
+    # Create the heatmap
     fig = ff.create_annotated_heatmap(
         z=occurrence_matrix.values,
         x=[col.split('_', 1)[1] for col in occurrence_matrix.columns],
@@ -258,10 +262,10 @@ def generate_interactive_heatmap(df_processed, index_columns, column_columns, ti
         title=title,
         autosize=False,
         width=fig_width,
-        height=fig_width,
+        height=fig_height,
         margin=dict(t=50, l=50, b=150, r=50),
-        xaxis_title=xaxis_title,  # Set x-axis title
-        yaxis_title=yaxis_title,  # Set y-axis title
+        xaxis_title=xaxis_label,
+        yaxis_title=yaxis_label,
     )
     fig.update_xaxes(tickangle=-45)
 
@@ -281,19 +285,25 @@ title_mapping = {
 }
 
 
-
-
-# Use the dynamic title when generating the heatmap
+# Generate the heatmap with the corrected axes
 heatmap_fig = generate_heatmap_from_selection(df_processed, x_axis_option, y_axis_option)
 
-# Display the dynamic title and heatmap
+# Correct the axis titles
+corrected_xaxis_title = x_axis_option  # These might need to be swapped to align with the plot's orientation
+corrected_yaxis_title = y_axis_option
+
+# Update the layout with the corrected axis titles
+heatmap_fig.update_layout(
+    xaxis_title=corrected_xaxis_title,
+    yaxis_title=corrected_yaxis_title
+)
+
+# Display the heatmap with the corrected title and axis labels
 st.write(f"### {dynamic_title}")
 st.markdown("<br><br>", unsafe_allow_html=True)
 with st.container():
     st.plotly_chart(heatmap_fig, use_container_width=True)
 
-# Assuming df_processed is your final DataFrame after all modifications
-df_processed.to_csv("processed_final.csv", index=False)
 
 
 
@@ -304,18 +314,15 @@ df_processed.to_csv("processed_final.csv", index=False)
 
 
 
+######################## INCIDENTS UMAP VISUALIZATION ########################
 
-######################## INCIDENTS CLUSTERING ########################
+st.title('Incidents (UMAP)')
 
-
-st.title('Clustering of Incidents (UMAP)')
-
-# Description for the UMAP clustering visualization
-st.write("UMAP visualizations that represent the clusters produced by selecting specific values to check similar incidents that are close to each other.")
+# Description for the UMAP visualization
+st.write("UMAP visualization that represents incidents based on selected features, allowing for exploration of data similarity.")
 
 # Assuming 'df_processed' also contains a 'Type' column to filter incidents
 df_incidents = df_processed[df_processed['Type'] == 'Incident'].reset_index(drop=True)
-
 
 # Prepare separate feature categories based on column prefixes in 'df_processed'
 feature_categories = {
@@ -325,119 +332,70 @@ feature_categories = {
     'sector': 'Sector Features'
 }
 
+# User selects the category for coloring
+coloring_options = st.selectbox('Select the category to color by:', options=list(feature_categories.keys()))
+
+# User selects the number of top features to display in the chosen category
+top_k = st.slider('Select the number of top categories to display:', min_value=1, max_value=20, value=5)
+
+# Get all features for the selected category
+all_features_in_category = [col for col in df_incidents.columns if col.startswith(coloring_options)]
+# Set or adjust the number of neighbors
+n_neighbors = st.slider('Select the number of neighbors for UMAP:', min_value=5, max_value=50, value=15)
 
 
-# Helper function to prepare feature selection multiselects
-def prepare_feature_multiselects(df, prefix, label):
-    # Retrieve features based on the prefix
-    features = [col for col in df.columns if col.startswith(prefix)]
-    feature_names = [col.replace(prefix + '_', '') for col in features]
-    selected_features = st.multiselect(label=f'Select {label}:', options=feature_names, default=[],
-                                       key=f'multiselect_{prefix}')
-    is_all_selected = len(selected_features) == 0
+def aggregate_features(df, prefix):
+    """Aggregate the one-hot encoded features back into a list of features for each document."""
+    aggregated_info = []
+    for _, row in df.iterrows():
+        features = [col.replace(prefix + '_', '') for col in df.columns if col.startswith(prefix) and row[col] == 1]
+        aggregated_info.append(", ".join(features))
+    return aggregated_info
 
-    return [prefix + '_' + feature for feature in (selected_features if selected_features else feature_names)], is_all_selected
+# Generate the aggregated feature strings for the dataframe
+df_incidents['Technology'] = aggregate_features(df_incidents, 'tech')
+df_incidents['Sector'] = aggregate_features(df_incidents, 'sector')
+df_incidents['Issue'] = aggregate_features(df_incidents, 'issue')
+df_incidents['Transparency'] = aggregate_features(df_incidents, 'transp')
 
-# Process feature selection for each category and check if "All" selected
-feature_selection = {}
-all_features_selected = True  # Assume "All" is selected initially
-for prefix, label in feature_categories.items():
-    selected_features, is_all_selected = prepare_feature_multiselects(df_incidents, prefix, label)
-    feature_selection[prefix] = selected_features
-    all_features_selected &= is_all_selected  # Update based on each category's selection
+# Process for displaying the UMAP
+if st.button('Generate UMAP Visualization'):
+    # Get top K columns in the selected category for coloring
+    # Get top K columns in the selected category for coloring
+    top_k_columns = get_top_columns(df_incidents, all_features_in_category, top_k)
 
-all_selected_features = [feature for features in feature_selection.values() for feature in features]
+    # Filter incidents containing at least one of the top-k features
+    df_filtered_incidents = df_incidents[df_incidents[top_k_columns].any(axis=1)]
 
-df_filtered_incidents = df_incidents[df_incidents[all_selected_features].any(axis=1)]
+    # Make sure to capture the headlines corresponding to the filtered incidents
+    headlines = df_filtered_incidents['Headline/title'].values  # Capture the filtered headlines
 
-# Before displaying the plot or the button, add the comment here
-st.caption("By default, when nothing is selected, for each category all features are used. \
-Select specific features and click on \"Generate Clustering\" to view the plot based on your preferences.")
-
-# Check if we have any incidents to cluster
-if not df_filtered_incidents.empty and (all_features_selected or st.button('Generate Clustering')):
-    # Preprocess features with one-hot encoding and standard scaling
-    df_features = pd.get_dummies(df_filtered_incidents[all_selected_features], drop_first=True)
+    # Encode features for UMAP
+    df_features = pd.get_dummies(df_filtered_incidents[top_k_columns], drop_first=True)
     scaler = StandardScaler()
-    scaled_features = scaler.fit_transform(df_filtered_incidents[all_selected_features])
+    scaled_features = scaler.fit_transform(df_features)
 
-    # Get the number of samples
-    n_samples = scaled_features.shape[0]
+    # Perform UMAP
+    from umap import UMAP
 
-    # Ensure that perplexity is less than the number of samples
-    perplexity_value = min(n_samples - 1, 30)  # Default perplexity is 30
-
-
-    @st.cache_data
-    def perform_umap(scaled_features, n_neighbors=15, min_dist=0.1, n_components=2, random_state=42):
-        """
-        Perform UMAP dimensionality reduction on scaled features.
-
-        Parameters:
-        - scaled_features: Standardized features array.
-        - n_neighbors: The size of local neighborhood (in terms of number of neighboring sample points) used for manifold approximation.
-        - min_dist: The effective minimum distance between embedded points. Smaller values will result in a more clustered/embedded distribution.
-        - n_components: The dimension of the space to embed into.
-        - random_state: A seed for the random number generator for reproducibility.
-
-        Returns:
-        - embedding: The transformed data.
-        """
-        from umap import UMAP
-        umap_instance = UMAP(n_neighbors=n_neighbors, min_dist=min_dist, n_components=n_components,
-                             random_state=random_state)
-        embedding = umap_instance.fit_transform(scaled_features)
-        return embedding
-
-
-    embedding = perform_umap(scaled_features)
-
-    # Apply KMeans clustering
-    kmeans = KMeans(n_clusters=5, random_state=42)
-    clusters = kmeans.fit_predict(embedding)
-
-    # Define the color mapping for clusters
-    color_discrete_map = {
-        '0': 'red',
-        '1': 'green',
-        '2': 'blue',
-        '3': 'orange',
-        '4': 'purple'
-        # Add more colors if there are more than 5 clusters
-    }
-
+    umap_instance = UMAP(n_neighbors=n_neighbors, min_dist=0.1, n_components=2, random_state=42)
+    embedding = umap_instance.fit_transform(scaled_features)
 
     # Prepare the DataFrame for plotting
     df_embedding = pd.DataFrame(embedding, columns=['UMAP-1', 'UMAP-2'])
-    df_embedding['Cluster'] = clusters.astype(str)
+    df_embedding['Category'] = df_filtered_incidents[top_k_columns].idxmax(axis=1).apply(lambda x: x.split('_', 1)[-1])
+    df_embedding['Headline/title'] = headlines
+    df_embedding['Technology'] = df_filtered_incidents['Technology'].values
+    df_embedding['Sector'] = df_filtered_incidents['Sector'].values
+    df_embedding['Issue'] = df_filtered_incidents['Issue'].values
+    df_embedding['Transparency'] = df_filtered_incidents['Transparency'].values
 
-
-    def aggregate_features(df, prefix):
-        """Aggregate the one-hot encoded features back into a list of features for each document."""
-        aggregated_info = []
-        for _, row in df.iterrows():
-            features = [col.replace(prefix + '_', '') for col in df.columns if col.startswith(prefix) and row[col] == 1]
-            aggregated_info.append(", ".join(features))
-        return aggregated_info
-
-
-    # Add aggregated features for hover information
-    for prefix in feature_categories:
-        df_embedding[prefix.capitalize()] = aggregate_features(df_filtered_incidents, prefix)
-
-    # Add Headline/title and aggregated features for hover information
-    df_embedding['Headline/title'] = df_incidents['Headline/title'].values
-    df_embedding['Technology'] = aggregate_features(df_incidents, 'tech')
-    df_embedding['Sector'] = aggregate_features(df_incidents, 'sector')
-    df_embedding['Issue'] = aggregate_features(df_incidents, 'issue')
-    df_embedding['Transparency'] = aggregate_features(df_incidents, 'transp')
-
-    # Adjust the plot creation to reflect UMAP usage
+    # Create plot with hover data
     fig = px.scatter(
         df_embedding,
         x='UMAP-1',
         y='UMAP-2',
-        color='Cluster',
+        color='Category',
         hover_data={
             'UMAP-1': False,
             'UMAP-2': False,
@@ -445,27 +403,18 @@ if not df_filtered_incidents.empty and (all_features_selected or st.button('Gene
             'Technology': True,
             'Sector': True,
             'Issue': True,
-            'Transparency': True},
-        color_discrete_map=color_discrete_map,
-        category_orders={"Cluster": [str(i) for i in range(5)]}
+            'Transparency': True
+        },
+        title='Incident Visualization with UMAP colored by ' + feature_categories[coloring_options],
+        width=700, height=700
     )
 
     # Update plot appearance
     fig.update_traces(marker=dict(size=5))
-    fig.update_layout(
-        title='Incident Clustering with UMAP & Cluster Coloring',
-        margin=dict(l=0, r=0, b=0, t=30),
-        legend_title_text='Cluster',
-        width=700, height=700,
-        legend=dict(
-            itemsizing='constant',
-            title_font_size=25,
-            font_size=24
-        )
-    )
-    with st.container():
-        # Display plot
-        st.plotly_chart(fig, use_container_width=True)
-else:
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=30))
 
-    st.write("Please select features and click 'Generate Clustering' to visualize.")
+    with st.container():
+        st.plotly_chart(fig, use_container_width=True)
+
+else:
+    st.write("Please select a category and click 'Generate UMAP Visualization' to visualize.")
