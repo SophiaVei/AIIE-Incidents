@@ -158,10 +158,10 @@ def get_top_columns(df, columns, top_n):
 
 
 # Streamlit app layout
-st.title('Data Exploration Heatmaps')
+st.title('Interactive Heatmaps for Feature Relationships')
 
 # Description for the heatmap
-st.write("Heatmaps representing the counts between specific pairs of features to check how the two variables (in the x/y axes) are related.")
+st.write("Explore the relationships between different features through interactive heatmaps. Each cell in the heatmap displays the count of records that share a particular combination of features represented by the intersecting row and column. This visualization can help identify prevalent patterns and associations in the data set.")
 
 
 # Dropdown with radio button for selecting the number of top frequencies
@@ -316,10 +316,10 @@ with st.container():
 
 ######################## INCIDENTS UMAP VISUALIZATION ########################
 
-st.title('Incidents (UMAP)')
+st.title('Dimensional Reduction with UMAP for Incident Analysis')
 
 # Description for the UMAP visualization
-st.write("UMAP visualization that represents incidents based on selected features, allowing for exploration of data similarity.")
+st.write("Utilize UMAP (Uniform Manifold Approximation and Projection) to reduce high-dimensional data into a two-dimensional space for visual analysis. This plot colors incidents based on selected feature categories to reveal potential clusters and relationships within the data. Hover over points to display detailed information on each incident, aiding in the discovery of similarities and outliers.")
 
 # Assuming 'df_processed' also contains a 'Type' column to filter incidents
 df_incidents = df_processed[df_processed['Type'] == 'Incident'].reset_index(drop=True)
@@ -417,4 +417,4 @@ if st.button('Generate UMAP Visualization'):
         st.plotly_chart(fig, use_container_width=True)
 
 else:
-    st.write("Please select a category and click 'Generate UMAP Visualization' to visualize.")
+    st.write("After selecting a feature category and the number of top features to consider, click 'Generate UMAP Visualization' to create the plot. The visualization groups incidents, represented as points, to illustrate how they relate across dimensions that are not immediately apparent in the raw data. Hover over each point to see a summary of the incident's attributes for more in-depth analysis.")
